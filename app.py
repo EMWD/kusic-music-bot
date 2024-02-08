@@ -3,18 +3,19 @@ import asyncio
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from config import *
 import random
+from queue_manager import local_queue
 from youtube_dl import YoutubeDL
 
 load_dotenv()
-
-description = '''An example bot to showcase the discord.ext.commands extension
-module.
-There are a number of utility commands being showcased here.'''
+lq = local_queue()
 
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
+
+description = '''test description'''
 
 bot = commands.Bot(command_prefix='!',
                    description=description, intents=intents)
@@ -32,70 +33,97 @@ async def e(ctx, password):
         exit(1)
 
 
-@bot.command()
-async def r(ctx, phrase_number=0):
+@bot.command(aliases=['t'])
+async def tinkoff(ctx, phrase_number=0):
     if not phrase_number:
         phrase_number = random.randint(1, 115)
-        await play(ctx, f'audios/{phrase_number}.mp3')
+        await local_play(ctx, f'audios/{phrase_number}.mp3')
     else:
-        await play(ctx, f'audios/{phrase_number}.mp3')
+        await local_play(ctx, f'audios/{phrase_number}.mp3')
 
 
-queue = []
+@bot.command(aliases=['q'])
+async def queue(ctx):
+    queue = lq.get_songs_queue()
+    if queue:
+        _iter = 1
+        for song in queue:
+            await ctx.send(f'Song #{_iter} - {song}')
+            _iter += 1
+    else: 
+        await ctx.send('Queue is empty')
 
 
-def addToQueue(path_to_song):
-    queue.append(path_to_song)
+@bot.command(aliases=['n'])
+async def next(ctx):
+    await ctx.voice_client.disconnect()
 
 
-def showQueue():
-    print(queue)
+# @bot.command(aliases=['n'])
+# async def next(ctx):
+#     if 
+#     await ctx.send(lq.get_songs_queue())
 
 
-@bot.command()
-async def play(ctx, url):
+
+@bot.command(aliases=['здфн', 'з', 'p'])
+async def play(ctx, url=DEFAULT_SONG):
+
     YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'False'}
     FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
     global vc
-    voice_channel = ctx.message.author.voice.channel
-    vc = await voice_channel.connect()
+    try:
+        voice_channel = ctx.message.author.voice.channel
+        vc = await voice_channel.connect()
+    except discord.ClientException as ce:
+        pass
+
     if vc.is_playing():
-        await ctx.send(f'{ctx.message.author.mention}, some song is already playing.')
+        await ctx.send(f'{ctx.message.author.mention}, i will add your song in common queue')
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+        URL = info['formats'][0]['url']
+        song_name = 'song_name'
+        lq.add_song(song_name, url)
     else:
         with YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
         URL = info['formats'][0]['url'] 
+        song_name = 'song_name'
+        lq.add_song(song_name, url)
         vc.play(discord.FFmpegPCMAudio(source = URL, **FFMPEG_OPTIONS))
         while vc.is_playing():
             await asyncio.sleep(1)
         if not vc.is_paused():
-            await asyncio.sleep(300)
+            lq.delete_song()   
+            while len(lq.get_songs_queue()) != 0:
+                song_url = lq.get_songs_queue()[0]['song_name']
+                lq.delete_song()             
+                await play(ctx, song_url)
+            await asyncio.sleep(600)
             await vc.disconnect()
             
 
-# @bot.command()
-# async def play(ctx, path_to_song):
-#     await join(ctx)
+@bot.command()
+async def local_play(ctx, path_to_song):
+    await join(ctx)
 
-#     addToQueue(path_to_song)
-#     showQueue()
+    guild = ctx.message.guild
+    voice_client = guild.voice_client
+    voice_client.play(
+        discord.FFmpegPCMAudio(path_to_song)
+    )
+    voice_client.source = discord.PCMVolumeTransformer(voice_client.source, 1)
 
-#     guild = ctx.message.guild
-#     voice_client = guild.voice_client
-#     voice_client.play(
-#         discord.FFmpegPCMAudio(path_to_song)
-#     )
-#     voice_client.source = discord.PCMVolumeTransformer(voice_client.source, 1)
-
-    # while voice_client.is_playing():
-    #     await asyncio.sleep(1)
-    # else:
-    #     await asyncio.sleep(120)
-    #     while voice_client.is_playing():
-    #         break
-    #     else:
-    #         await voice_client.disconnect()
+    while voice_client.is_playing():
+        await asyncio.sleep(1)
+    else:
+        await asyncio.sleep(600)
+        while voice_client.is_playing():
+            break
+        else:
+            await voice_client.disconnect()
 
 
 @bot.command()
@@ -106,16 +134,6 @@ async def pause(ctx):
 @bot.command()
 async def resume(ctx):
     ctx.voice_client.resume()
-
-
-# TODO
-# @bot.command()
-# async def next(ctx):
-#     pass
-
-# TODO
-# ClientException: Already playing audio.
-# Make QUEUE
 
 
 @bot.command()
