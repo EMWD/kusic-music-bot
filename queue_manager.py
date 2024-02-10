@@ -11,5 +11,8 @@ class local_queue():
     def delete_song(self):
         self._queue.pop(0)
 
+    def pune_queue(self):
+        self._queue = []
+
     def get_songs_queue(self):
         return self._queue

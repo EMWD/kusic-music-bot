@@ -48,22 +48,15 @@ async def queue(ctx):
     if queue:
         _iter = 1
         for song in queue:
-            await ctx.send(f'Song #{_iter} - {song}')
+            if _iter == 1:
+                embed = discord.Embed()
+                embed.description = "This country is not supported, you can ask me to add it [here](your_link_goes_here)."
+                await ctx.send(f'Current song is - {song["song_name"]}')
+            else:
+                await ctx.send(f'Song #{_iter} - {song["song_name"]}')
             _iter += 1
     else: 
         await ctx.send('Queue is empty')
-
-
-@bot.command(aliases=['n'])
-async def next(ctx):
-    await ctx.voice_client.disconnect()
-
-
-# @bot.command(aliases=['n'])
-# async def next(ctx):
-#     if 
-#     await ctx.send(lq.get_songs_queue())
-
 
 
 @bot.command(aliases=['здфн', 'з', 'p'])
@@ -101,7 +94,7 @@ async def play(ctx, url=DEFAULT_SONG):
                 song_url = lq.get_songs_queue()[0]['song_name']
                 lq.delete_song()             
                 await play(ctx, song_url)
-            await asyncio.sleep(600)
+            await asyncio.sleep(120)
             await vc.disconnect()
             
 
@@ -119,11 +112,22 @@ async def local_play(ctx, path_to_song):
     while voice_client.is_playing():
         await asyncio.sleep(1)
     else:
-        await asyncio.sleep(600)
+        await asyncio.sleep(15)
         while voice_client.is_playing():
             break
         else:
             await voice_client.disconnect()
+
+
+@bot.command(aliases=['c', 'с'])
+async def cycle(ctx):
+
+    await ctx.voice_client.disconnect()
+
+
+@bot.command(aliases=['n'])
+async def next(ctx):
+    await ctx.voice_client.disconnect()
 
 
 @bot.command()
@@ -134,6 +138,12 @@ async def pause(ctx):
 @bot.command()
 async def resume(ctx):
     ctx.voice_client.resume()
+
+
+@bot.command(aliases=['d', 'в'])
+async def drop(ctx):
+    lq.pune_queue() 
+    await ctx.voice_client.disconnect()
 
 
 @bot.command()
