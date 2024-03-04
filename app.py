@@ -60,7 +60,8 @@ async def queue(ctx):
 
 
 @bot.command(aliases=['здфн', 'з', 'p'])
-async def play(ctx, url=DEFAULT_SONG):
+async def play(ctx, url=DEFAULT_SONG, loop=False):
+    
 
     YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'False'}
     FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
@@ -89,13 +90,20 @@ async def play(ctx, url=DEFAULT_SONG):
         while vc.is_playing():
             await asyncio.sleep(1)
         if not vc.is_paused():
-            lq.delete_song()   
+            if not loop:
+                lq.delete_song()   
             while len(lq.get_songs_queue()) != 0:
                 song_url = lq.get_songs_queue()[0]['song_name']
-                lq.delete_song()             
+                if not loop:
+                    lq.delete_song()             
                 await play(ctx, song_url)
-            await asyncio.sleep(120)
+            await asyncio.sleep(300)
             await vc.disconnect()
+
+
+@bot.command(aliases=['здфнд', 'pl', 'зд'])
+async def playl(ctx, url=DEFAULT_SONG):
+    await play(ctx, url, True)
             
 
 @bot.command()
