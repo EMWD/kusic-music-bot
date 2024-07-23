@@ -2,3 +2,6 @@
 .idea
 audios/
 venv/
+/pycache/*
+__pycache__/
+
