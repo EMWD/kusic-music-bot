@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from config import *
 import random
 from queue_manager import local_queue
-from youtube_dl import YoutubeDL
 
 load_dotenv()
 lq = local_queue()
