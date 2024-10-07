@@ -61,19 +61,22 @@ async def play(ctx, url=DEFAULT_SONG, loop=False):
         lq.add_song("song_name", url)
 
     else:
-
+        # 'proxy':'socks5://127.0.0.1:1080', 'cookiesfrombrowser': ('chrome',),
         FFMPEG_OPTIONS = {'before_options':'-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 200M','options': '-vn'}
-        YDL_OPTIONS = {'format': 'bestaudio/best', 'outtmpl': 'audios/%(extractor)s-%(id)s-%(title)s.%(ext)s','quiet': True, 'postprocessors': [{ 'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192',}],}
+        YDL_OPTIONS = {'format': 'bestaudio/best', 'cookiesfrombrowser': ('chrome',), 'outtmpl': f'{PATH_TO_AUDIOS}%(id)s','quiet': True, 'postprocessors': [{ 'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '192',}],}
         
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=True)
-            song_url = info['url']
-            print(song_url)
-            source = discord.FFmpegPCMAudio(source=song_url, options=FFMPEG_OPTIONS)
+            
+            song_id = info['id']
+            source = discord.FFmpegPCMAudio(executable="/usr/bin/ffmpeg", source=f"{PATH_TO_AUDIOS}{song_id}.mp3", options=FFMPEG_OPTIONS)
+            
             vc = ctx.voice_client
-            lq.add_song("song_name", url)
             vc.play(source)
             
+            song_url = info['url']
+            lq.add_song("song_name", url)
+
             while vc.is_playing():
                 await asyncio.sleep(1)
             if not vc.is_paused():
@@ -96,7 +99,7 @@ async def playl(ctx, url=DEFAULT_SONG):
 
 @bot.command(aliases=['c', 'с'])
 async def clean(ctx):
-    pattern = "audios/*"
+    pattern = f"{PATH_TO_AUDIOS}*"
     files = glob.glob(pattern)
     for file in files:
         os.remove(file)
